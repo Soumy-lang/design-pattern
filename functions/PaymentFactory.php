@@ -2,13 +2,16 @@
 
 class PaymentFactory
 {
-    public static function createPayment($type) {
-        switch($type) {
+    const UNSUPPORTED_PAYMENT_GATEWAY_MESSAGE = 'Interface de paiement non prise en charge';
+
+    public static function createPaymentGateway($gatewayName, $apiKey, $apiSecret)
+    {
+        switch ($gatewayName)
+        {
             case 'stripe':
-                return new StripePayment();
-            // Ajouter d'autres cas pour d'autres interfaces de paiement
+                return new StripeGateway($apiKey, $apiSecret);
             default:
-                throw new Exception("Unknown payment type");
+                throw new Exception(self::UNSUPPORTED_PAYMENT_GATEWAY_MESSAGE);
         }
     }
 }

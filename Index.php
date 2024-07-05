@@ -1,24 +1,29 @@
 <?php
 
-require 'functions/PaymentFactory.php';
-require 'functions/StripePayment.php';
-require 'functions/Transaction.php';
-require 'Observer.php';
+require_once( __DIR__ . '/functions/PaymentLibrary.php');
+require_once (__DIR__ . '/functions/PaymentTransaction.php');
+require_once (__DIR__ . '/functions/StripeGateway.php');
+require_once (__DIR__ . '/functions/PaymentGateway.php');
 
-// Initialisation de l'interface de paiement
-$stripePayment = PaymentFactory::createPayment('stripe');
-$stripePayment->initialize(['api_key' => 'your_stripe_api_key']);
 
-// Création d'une transaction
-$transaction = $stripePayment->createTransaction(100.0, 'USD', 'Achat de produit XYZ');
+// Configuration de la clé API de Stripe
+$stripeApiKey = 'sk_test_51PX3DJKaeOSf3z3yxANNnPOQOoKreoE6f5zuuqaefXk6Lm4RTOXZlMsDQ26LAhjDBkVTrnqhmcz3ZUHa1P9aWTea00p9rDqvja';
 
-// Exécution de la transaction
-$result = $stripePayment->executeTransaction($transaction->id);
+// Initialisation de la bibliothèque de paiement
+$paymentLibrary = new PaymentLibrary();
 
-// Gestion des observateurs
-$notifier = new PaymentNotifier();
-$notifier->addObserver(new BillingService());
-$notifier->addObserver(new InventoryService());
+// Ajout de l'interface de paiement Stripe
+$stripeGateway = new StripeGateway($stripeApiKey);
+$paymentLibrary->addPaymentGateway($stripeGateway);
 
-$notifier->notify($transaction);
+// Création d'une transaction de paiement
+$transactionAmount = 50.00;
+$transactionCurrency = 'EUR';
+$transactionDescription = 'Paiement test';
+$transaction = new PaymentTransaction($transactionAmount, $transactionCurrency, $transactionDescription);
 
+// Exécution de la transaction de paiement avec Stripe
+$paymentLibrary->executeTransaction($transaction, 'stripe');
+
+// Affichage du statut de la transaction
+echo 'Statut de la transaction : ' . $transaction->getStatus();
