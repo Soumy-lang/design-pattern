@@ -1,29 +1,61 @@
 <?php
 
-require_once( __DIR__ . '/functions/PaymentLibrary.php');
-require_once (__DIR__ . '/functions/PaymentTransaction.php');
-require_once (__DIR__ . '/functions/StripeGateway.php');
-require_once (__DIR__ . '/functions/PaymentGateway.php');
+require 'vendor/autoload.php'; // Assurez-vous que l'autoload de Composer est inclus
 
+use PaymentLibraryProject\PaymentLibrary;
+use PaymentLibraryProject\PaymentGateways\StripeGateway;
+use PaymentLibraryProject\Exceptions\PaymentException;
+use PaymentLibraryProject\Notifications\EmailNotification;
+use Dotenv\Dotenv; // Importez correctement le namespace
 
-// Configuration de la clé API de Stripe
-$stripeApiKey = 'sk_test_51PX3DJKaeOSf3z3yxANNnPOQOoKreoE6f5zuuqaefXk6Lm4RTOXZlMsDQ26LAhjDBkVTrnqhmcz3ZUHa1P9aWTea00p9rDqvja';
+// Charger les variables d'environnement depuis le fichier .env
+$dotenv = Dotenv::createImmutable(__DIR__);
+$dotenv->load();
 
-// Initialisation de la bibliothèque de paiement
-$paymentLibrary = new PaymentLibrary();
+// Configuration de la passerelle de paiement Stripe
+$config = [
+    'stripe' => [
+        'api_key' => $_ENV['STRIPE_API_KEY'], // Utilisez la clé secrète ici
+        'api_secret' => $_ENV['STRIPE_API_SECRET'] // Utilisez la clé secrète ici aussi
+    ]
+];
 
-// Ajout de l'interface de paiement Stripe
-$stripeGateway = new StripeGateway($stripeApiKey);
-$paymentLibrary->addPaymentGateway($stripeGateway);
+$paymentLibrary = new PaymentLibrary($config);
 
-// Création d'une transaction de paiement
-$transactionAmount = 50.00;
-$transactionCurrency = 'EUR';
-$transactionDescription = 'Paiement test';
-$transaction = new PaymentTransaction($transactionAmount, $transactionCurrency, $transactionDescription);
+// Ajouter une notification par e-mail
+$emailNotification = new EmailNotification('neffatinadime@gmail.com');
+$paymentLibrary->addNotification($emailNotification);
 
-// Exécution de la transaction de paiement avec Stripe
-$paymentLibrary->executeTransaction($transaction, 'stripe');
+// Traiter un paiement
+$amount = 100.00;
+$currency = 'usd';
+$description = 'Test Payment';
+$gatewayName = 'stripe';
 
-// Affichage du statut de la transaction
-echo 'Statut de la transaction : ' . $transaction->getStatus();
+try {
+    // Créer une transaction
+    echo "Tentative de création de transaction...\n";
+    $transaction = $paymentLibrary->createTransaction($amount, $currency, $description, $gatewayName);
+    echo "Transaction créée avec succès.\n";
+
+    // Exécuter la transaction
+    echo "Tentative d'exécution de la transaction...\n";
+    $success = $paymentLibrary->executeTransaction($transaction, $gatewayName);
+
+    if ($success) {
+        echo 'Paiement réussi';
+    } else {
+        echo 'Échec du paiement';
+    }
+} catch (PaymentException $e) {
+    echo 'Erreur : ' . $e->getMessage();
+}
+
+// Supprimer la passerelle Stripe après toutes les opérations
+try {
+    echo "Tentative de suppression de la passerelle Stripe...\n";
+    $paymentLibrary->removePaymentGateway('stripe');
+    echo 'Passerelle Stripe supprimée';
+} catch (PaymentException $e) {
+    echo 'Erreur : ' . $e->getMessage();
+}

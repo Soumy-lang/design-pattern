@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Stripe Payment Form</title>
+  <style>
+    /* Ajoutez des styles ici pour styliser votre formulaire de paiement */
+  </style>
+  <!-- Inclure Stripe.js -->
+  <script src="https://js.stripe.com/v3/"></script>
+</head>
+<body>
+  <form id="payment-form">
+    <div id="card-element">
+      <!-- Un élément Stripe sera inséré ici. -->
+    </div>
+    <button type="submit">Submit Payment</button>
+  </form>
+
+  <script>
+    var stripe = Stripe('votre_clé_publishable'); // Remplacez par votre clé publiable Stripe
+    var elements = stripe.elements();
+    var card = elements.create('card');
+    card.mount('#card-element');
+
+    var form = document.getElementById('payment-form');
+    form.addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      stripe.createToken(card).then(function(result) {
+        if (result.error) {
+          // Afficher les erreurs à l'utilisateur
+          console.error(result.error.message);
+        } else {
+          // Envoyer le token au serveur
+          fetch('/process-payment', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ token: result.token.id })
+          }).then(function(response) {
+            return response.json();
+          }).then(function(data) {
+            console.log(data);
+          });
+        }
+      });
+    });
+  </script>
+</body>
+</html>
